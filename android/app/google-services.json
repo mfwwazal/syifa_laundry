@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "519762023801",
+    "project_id": "collab-with-dkv",
+    "storage_bucket": "collab-with-dkv.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:519762023801:android:d55095eb4d1b63e45c8ba8",
+        "android_client_info": {
+          "package_name": "com.example.syifa_laundry"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDQgNF3wMkk97bXY_XyNcxeeZLVZvYBXsA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
