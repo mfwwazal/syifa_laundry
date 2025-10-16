@@ -129,21 +129,24 @@ class _MandiriPageState extends State<MandiriPage> {
                       ),
                     ),
                     const SizedBox(height: 20),
-
                     _buildTextField(
                       controller: _namaController,
                       label: "Nama Lengkap",
                       icon: Icons.person_outline,
                     ),
                     const SizedBox(height: 15),
-
-                    _buildTextField(
+                    _buildDropdownField(
                       controller: _roomController,
-                      label: "Nomor Kamar (contoh: 11.04)",
-                      icon: Icons.meeting_room_outlined,
+                      label: 'Nomor Kamar',
+                      icon: Icons.home,
+                      items: const [
+                        '11.01',
+                        '11.02',
+                        '11.03',
+                        '11.04',
+                      ],
                     ),
                     const SizedBox(height: 15),
-
                     _buildTextField(
                       controller: _jumlahController,
                       label: "Jumlah Pakaian (otomatis)",
@@ -151,7 +154,6 @@ class _MandiriPageState extends State<MandiriPage> {
                       readOnly: true,
                     ),
                     const SizedBox(height: 20),
-
                     const Text(
                       "Pilih Jenis Pakaian:",
                       style: TextStyle(
@@ -161,7 +163,6 @@ class _MandiriPageState extends State<MandiriPage> {
                       ),
                     ),
                     const SizedBox(height: 10),
-
                     Column(
                       children: _clothesTypes.keys.map((type) {
                         return Theme(
@@ -185,7 +186,6 @@ class _MandiriPageState extends State<MandiriPage> {
                       }).toList(),
                     ),
                     const SizedBox(height: 25),
-
                     SizedBox(
                       width: double.infinity,
                       height: 50,
@@ -255,6 +255,61 @@ class _MandiriPageState extends State<MandiriPage> {
       ),
       validator: (value) =>
           !readOnly && (value == null || value.isEmpty) ? 'Wajib diisi' : null,
+    );
+  }
+
+  Widget _buildDropdownField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    required List<String> items,
+  }) {
+    const Color primaryCyan = Color(0xFF63B9C4);
+    const Color lightCyan = Color(0xFF86D5E0);
+
+    String? selectedValue = controller.text.isNotEmpty ? controller.text : null;
+
+    return StatefulBuilder(
+      builder: (context, setState) {
+        return DropdownButtonFormField<String>(
+          value: selectedValue,
+          dropdownColor: const Color(0xFF14292E),
+          style: const TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            labelText: label,
+            labelStyle: const TextStyle(color: Colors.white70),
+            prefixIcon: Icon(icon, color: lightCyan),
+            filled: true,
+            fillColor: const Color(0xFF14292E),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: primaryCyan.withOpacity(0.5)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: primaryCyan.withOpacity(0.3)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: lightCyan, width: 1.5),
+            ),
+          ),
+          items: items.map((String value) {
+            return DropdownMenuItem<String>(
+              value: value,
+              child: Text(value, style: const TextStyle(color: Colors.white)),
+            );
+          }).toList(),
+          onChanged: (value) {
+            setState(() {
+              selectedValue = value;
+              controller.text = value ?? '';
+            });
+          },
+          validator: (value) =>
+              (value == null || value.isEmpty) ? 'Pilih nomor kamar' : null,
+        );
+      },
     );
   }
 }

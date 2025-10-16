@@ -137,11 +137,18 @@ class _FormSantriPageState extends State<FormSantriPage> {
                 ),
                 const SizedBox(height: 15),
 
-                _buildInputField(
+                _buildDropdownField(
                   controller: _roomController,
                   label: 'Nomor Kamar',
                   icon: Icons.home,
+                  items: const [
+                    '11.01',
+                    '11.02',
+                    '11.03',
+                    '11.04',
+                  ],
                 ),
+
                 const SizedBox(height: 15),
 
                 // Jumlah Pakaian (otomatis & non-editable)
@@ -152,8 +159,7 @@ class _FormSantriPageState extends State<FormSantriPage> {
                   decoration: InputDecoration(
                     labelText: 'Jumlah Pakaian (otomatis)',
                     labelStyle: const TextStyle(color: Colors.white70),
-                    prefixIcon:
-                        const Icon(Icons.numbers, color: primaryCyan),
+                    prefixIcon: const Icon(Icons.numbers, color: primaryCyan),
                     filled: true,
                     fillColor: const Color(0xFF1C3A40),
                     border: OutlineInputBorder(
@@ -266,6 +272,61 @@ class _FormSantriPageState extends State<FormSantriPage> {
         ),
       ),
       validator: (value) => value!.isEmpty ? '$label wajib diisi' : null,
+    );
+  }
+
+  Widget _buildDropdownField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    required List<String> items,
+  }) {
+    const Color primaryCyan = Color(0xFF63B9C4);
+    const Color lightCyan = Color(0xFF86D5E0);
+
+    String? selectedValue = controller.text.isNotEmpty ? controller.text : null;
+
+    return StatefulBuilder(
+      builder: (context, setState) {
+        return DropdownButtonFormField<String>(
+          value: selectedValue,
+          dropdownColor: const Color(0xFF14292E),
+          style: const TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            labelText: label,
+            labelStyle: const TextStyle(color: Colors.white70),
+            prefixIcon: Icon(icon, color: lightCyan),
+            filled: true,
+            fillColor: const Color(0xFF14292E),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: primaryCyan.withOpacity(0.5)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: primaryCyan.withOpacity(0.3)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: lightCyan, width: 1.5),
+            ),
+          ),
+          items: items.map((String value) {
+            return DropdownMenuItem<String>(
+              value: value,
+              child: Text(value, style: const TextStyle(color: Colors.white)),
+            );
+          }).toList(),
+          onChanged: (value) {
+            setState(() {
+              selectedValue = value;
+              controller.text = value ?? '';
+            });
+          },
+          validator: (value) =>
+              (value == null || value.isEmpty) ? 'Pilih nomor kamar' : null,
+        );
+      },
     );
   }
 }
