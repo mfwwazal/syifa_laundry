@@ -33,6 +33,39 @@ class _ProfilePageState extends State<ProfilePage>
     _fadeAnim = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
     _loadUserData();
   }
+  // ... (di dalam class _ProfilePageState)
+
+// ...
+
+// Hapus atau ganti _navigateToEditProfile dengan fungsi ini:
+  void _showEditProfileSheet() {
+    // Pastikan user dan userData tersedia
+    if (user == null || userData == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Data pengguna tidak tersedia.")),
+      );
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true, // Penting agar keyboard tidak menutupi input
+      backgroundColor:
+          Colors.transparent, // Agar background Container di bawah bisa muncul
+      builder: (context) {
+        return _EditProfileForm(
+          initialData: userData!,
+          userId: user!.uid,
+          // Callback untuk me-refresh data di ProfilePage
+          onProfileUpdated: () {
+            _loadUserData();
+          },
+        );
+      },
+    );
+  }
+
+// ...
 
   Future<void> _loadUserData() async {
     final prefs = await SharedPreferences.getInstance();
@@ -159,15 +192,30 @@ class _ProfilePageState extends State<ProfilePage>
                               size: 70, color: Colors.black),
                         ),
                         const SizedBox(height: 20),
-                        Text(
-                          userData?['name'] ??
-                              user?.email?.split('@')[0] ??
-                              'Unknown User',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
+
+                        // --- Tombol Edit Profil ---
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              userData?['name'] ??
+                                  user?.email?.split('@')[0] ??
+                                  'Unknown User',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            IconButton(
+                              onPressed: _showEditProfileSheet,
+                              icon: const Icon(Icons.edit,
+                                  color: Colors.cyanAccent, size: 24),
+                              tooltip: 'Edit Profil',
+                            )
+                          ],
                         ),
                         const SizedBox(height: 10),
                         Text(
@@ -246,8 +294,8 @@ class _ProfilePageState extends State<ProfilePage>
                             fillColor: Colors.white.withOpacity(0.1),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(14),
-                              borderSide: const BorderSide(
-                                  color: Colors.cyanAccent),
+                              borderSide:
+                                  const BorderSide(color: Colors.cyanAccent),
                             ),
                           ),
                           style: const TextStyle(color: Colors.white),
@@ -327,6 +375,231 @@ class _ProfilePageState extends State<ProfilePage>
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+// Di file profile_page.dart
+
+// Tambahkan kode ini di bagian bawah file, di luar class ProfilePage dan _ProfilePageState
+
+class _EditProfileForm extends StatefulWidget {
+  final Map<String, dynamic> initialData;
+  final String userId;
+  final VoidCallback onProfileUpdated;
+
+  const _EditProfileForm({
+    required this.initialData,
+    required this.userId,
+    required this.onProfileUpdated,
+  });
+
+  @override
+  State<_EditProfileForm> createState() => _EditProfileFormState();
+}
+
+class _EditProfileFormState extends State<_EditProfileForm> {
+  final _formKey = GlobalKey<FormState>();
+  late TextEditingController _nameController;
+  late TextEditingController _phoneController;
+  late TextEditingController _addressController;
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController =
+        TextEditingController(text: widget.initialData['name'] ?? '');
+    _phoneController =
+        TextEditingController(text: widget.initialData['phone'] ?? '');
+    _addressController =
+        TextEditingController(text: widget.initialData['address'] ?? '');
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _phoneController.dispose();
+    _addressController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _saveProfile(BuildContext context) async {
+    if (_formKey.currentState!.validate()) {
+      setState(() => _isSaving = true);
+
+      try {
+        final updatedData = {
+          'name': _nameController.text.trim(),
+          'phone': _phoneController.text.trim(),
+          'address': _addressController.text.trim(),
+        };
+
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(widget.userId)
+            .update(updatedData);
+
+        widget
+            .onProfileUpdated(); // Panggil callback untuk refresh data di ProfilePage
+
+        if (mounted) {
+          // Tutup bottom sheet
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Profil berhasil diperbarui!"),
+              backgroundColor: Color(0xFF63B9C4), // Warna cyan
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Gagal menyimpan: $e"),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() => _isSaving = false);
+        }
+      }
+    }
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    TextInputType keyboardType = TextInputType.text,
+    int maxLines = 1,
+    String? Function(String?)? validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      maxLines: maxLines,
+      validator: validator,
+      style: const TextStyle(color: Colors.white),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: const TextStyle(color: Colors.cyanAccent),
+        prefixIcon: Icon(icon, color: Colors.cyanAccent),
+        filled: true,
+        fillColor: Colors.white.withOpacity(0.1),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.cyanAccent, width: 1.5),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.cyanAccent.withOpacity(0.5)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.cyanAccent, width: 2),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const Color cyanLight = Color(0xFF63B9C4);
+
+    return Container(
+      padding: EdgeInsets.only(
+        top: 30,
+        left: 20,
+        right: 20,
+        bottom: MediaQuery.of(context).viewInsets.bottom +
+            20, // Penting untuk keyboard
+      ),
+      decoration: const BoxDecoration(
+        color: Color(0xFF1A2A2E), // Warna yang lebih gelap untuk modal
+        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+      ),
+      child: SingleChildScrollView(
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                "Edit Informasi Profil",
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+
+              // Input Nama
+              _buildTextField(
+                controller: _nameController,
+                label: "Nama Lengkap",
+                icon: Icons.person,
+                validator: (value) =>
+                    value == null || value.isEmpty ? 'Nama wajib diisi.' : null,
+              ),
+              const SizedBox(height: 16),
+
+              // Input Telepon
+              _buildTextField(
+                controller: _phoneController,
+                label: "Nomor Telepon",
+                icon: Icons.phone,
+                keyboardType: TextInputType.phone,
+              ),
+              const SizedBox(height: 16),
+
+              // Input Alamat
+              _buildTextField(
+                controller: _addressController,
+                label: "Alamat Lengkap",
+                icon: Icons.location_on,
+                maxLines: 3,
+              ),
+              const SizedBox(height: 30),
+
+              // Tombol Simpan
+              ElevatedButton.icon(
+                onPressed: _isSaving ? null : () => _saveProfile(context),
+                icon: _isSaving
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.black,
+                        ),
+                      )
+                    : const Icon(Icons.save, color: Colors.black),
+                label: Text(
+                  _isSaving ? "Menyimpan..." : "Simpan Perubahan",
+                  style: const TextStyle(
+                    color: Colors.black,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: cyanLight,
+                  minimumSize: const Size(double.infinity, 52),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
