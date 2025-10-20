@@ -46,7 +46,6 @@ class SyifaLaundryApp extends StatelessWidget {
         '/register': (context) => const RegisterPage(),
         '/main': (context) => const MainLayout(),
         '/login': (context) => const LoginPage(),
-        
       },
 
       home: StreamBuilder<User?>(
