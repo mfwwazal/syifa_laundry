@@ -35,7 +35,7 @@ class HomePage extends StatelessWidget {
                     ClipRRect(
                       borderRadius: BorderRadius.circular(50),
                       child: Image.asset(
-                        '../assets/images/logo_smk.png',
+                        'assets/images/logo_smk.png',
                         width: 38,
                         height: 38,
                         fit: BoxFit.cover,
@@ -74,7 +74,7 @@ class HomePage extends StatelessWidget {
                 child: Stack(
                   children: [
                     Image.asset(
-                      '../assets/images/banner.png',
+                      'assets/images/banner.png',
                       width: double.infinity,
                       height: 220,
                       fit: BoxFit.cover,

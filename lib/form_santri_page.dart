@@ -282,7 +282,6 @@ class _FormSantriPageState extends State<FormSantriPage> {
     required List<String> items,
   }) {
     const Color primaryCyan = Color(0xFF63B9C4);
-    const Color lightCyan = Color(0xFF86D5E0);
 
     String? selectedValue = controller.text.isNotEmpty ? controller.text : null;
 
@@ -290,25 +289,17 @@ class _FormSantriPageState extends State<FormSantriPage> {
       builder: (context, setState) {
         return DropdownButtonFormField<String>(
           value: selectedValue,
-          dropdownColor: const Color(0xFF14292E),
+          dropdownColor: const Color(0xFF1C3A40), // ✅ selaras dengan form lain
           style: const TextStyle(color: Colors.white),
           decoration: InputDecoration(
             labelText: label,
             labelStyle: const TextStyle(color: Colors.white70),
-            prefixIcon: Icon(icon, color: lightCyan),
+            prefixIcon: Icon(icon, color: primaryCyan),
             filled: true,
-            fillColor: const Color(0xFF14292E),
+            fillColor: const Color(0xFF1C3A40), // ✅ sama seperti form lainnya
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: primaryCyan.withOpacity(0.5)),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: primaryCyan.withOpacity(0.3)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: lightCyan, width: 1.5),
+              borderSide: BorderSide.none,
             ),
           ),
           items: items.map((String value) {

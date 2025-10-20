@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'auth/login_page.dart';
+import 'package:syifa_laundry/home_page.dart';
+import 'package:syifa_laundry/welcome_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -22,8 +23,8 @@ class _ProfilePageState extends State<ProfilePage>
   @override
   void initState() {
     super.initState();
-    _controller =
-        AnimationController(vsync: this, duration: const Duration(milliseconds: 800));
+    _controller = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 800));
     _fadeAnim = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
     _loadUserData();
   }
@@ -35,14 +36,18 @@ class _ProfilePageState extends State<ProfilePage>
 
     if (currentUser != null) {
       user = currentUser;
-      final snapshot =
-          await FirebaseFirestore.instance.collection('users').doc(currentUser.uid).get();
+      final snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUser.uid)
+          .get();
       if (snapshot.exists) {
         userData = snapshot.data();
       }
     } else if (customerId != null) {
-      final snapshot =
-          await FirebaseFirestore.instance.collection('users').doc(customerId).get();
+      final snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(customerId)
+          .get();
       if (snapshot.exists) {
         userData = snapshot.data();
       }
@@ -60,7 +65,7 @@ class _ProfilePageState extends State<ProfilePage>
     if (mounted) {
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const LoginPage()),
+        MaterialPageRoute(builder: (_) => const WelcomePage()),
         (route) => false,
       );
     }
@@ -110,10 +115,31 @@ class _ProfilePageState extends State<ProfilePage>
               const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: () async {
-                  if (user == null) return;
+                  final prefs = await SharedPreferences.getInstance();
+                  final customerId = prefs.getString('customerId');
+                  final currentUser = FirebaseAuth.instance.currentUser;
+
+                  String? docId;
+                  if (currentUser != null) {
+                    docId = currentUser.uid;
+                  } else if (customerId != null) {
+                    docId = customerId;
+                  }
+
+                  if (docId == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content:
+                            Text("Gagal menyimpan: pengguna tidak ditemukan."),
+                        backgroundColor: Colors.redAccent,
+                      ),
+                    );
+                    return;
+                  }
+
                   await FirebaseFirestore.instance
                       .collection('users')
-                      .doc(user!.uid)
+                      .doc(docId)
                       .update({
                     'name': nameCtrl.text.trim(),
                     'phone': phoneCtrl.text.trim(),
@@ -121,7 +147,7 @@ class _ProfilePageState extends State<ProfilePage>
                   });
 
                   Navigator.pop(context);
-                  _loadUserData(); // refresh tampilan
+                  await _loadUserData();
 
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
@@ -154,7 +180,8 @@ class _ProfilePageState extends State<ProfilePage>
     );
   }
 
-  Widget _buildTextField(String label, TextEditingController controller, IconData icon) {
+  Widget _buildTextField(
+      String label, TextEditingController controller, IconData icon) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: TextField(
@@ -229,13 +256,16 @@ class _ProfilePageState extends State<ProfilePage>
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.08),
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: cyanLight.withOpacity(0.3)),
+                            border:
+                                Border.all(color: cyanLight.withOpacity(0.3)),
                           ),
                           padding: const EdgeInsets.all(16),
                           child: Column(
                             children: [
-                              _infoRow(Icons.phone, "Phone", userData?['phone'] ?? "-"),
-                              _infoRow(Icons.location_on, "Address", userData?['address'] ?? "-"),
+                              _infoRow(Icons.phone, "Phone",
+                                  userData?['phone'] ?? "-"),
+                              _infoRow(Icons.location_on, "Address",
+                                  userData?['address'] ?? "-"),
                               _infoRow(Icons.calendar_today, "Joined At",
                                   userData?['createdAt'] ?? "-"),
                             ],

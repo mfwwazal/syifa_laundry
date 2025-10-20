@@ -23,7 +23,6 @@ class WelcomePage extends StatelessWidget {
               colorBlendMode: BlendMode.darken,
             ),
           ),
-
           Positioned(
             top: 60,
             left: 20,
@@ -37,7 +36,6 @@ class WelcomePage extends StatelessWidget {
               ),
             ),
           ),
-
           Align(
             alignment: Alignment.topCenter,
             child: Padding(
@@ -55,7 +53,6 @@ class WelcomePage extends StatelessWidget {
               ),
             ),
           ),
-
           Align(
             alignment: Alignment.bottomCenter,
             child: Padding(
@@ -118,7 +115,8 @@ class WelcomePage extends StatelessWidget {
                             ),
                             child: const Text(
                               'CUCI SEKARANG!',
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                              style: TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.bold),
                             ),
                           ),
 
@@ -132,21 +130,30 @@ class WelcomePage extends StatelessWidget {
                                   onPressed: () {
                                     Navigator.push(
                                       context,
-                                      MaterialPageRoute(builder: (_) => const LoginPage()),
+                                      MaterialPageRoute(
+                                          builder: (_) => const LoginPage()),
                                     );
                                   },
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.white.withOpacity(0.85),
+                                    backgroundColor:
+                                        Colors.white.withOpacity(0.85),
                                     foregroundColor: primaryCyan,
-                                    minimumSize: const Size(double.infinity, 50),
+                                    minimumSize:
+                                        const Size(double.infinity, 50),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(12),
-                                      side: const BorderSide(color: primaryCyan),
+                                      side:
+                                          const BorderSide(color: primaryCyan),
                                     ),
                                   ),
-                                  child: const Text(
-                                    'LOGIN',
-                                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                  child: const FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Text(
+                                      'LOGIN',
+                                      style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold),
+                                    ),
                                   ),
                                 ),
                               ),
@@ -156,20 +163,27 @@ class WelcomePage extends StatelessWidget {
                                   onPressed: () {
                                     Navigator.push(
                                       context,
-                                      MaterialPageRoute(builder: (_) => const RegisterPage()),
+                                      MaterialPageRoute(
+                                          builder: (_) => const RegisterPage()),
                                     );
                                   },
                                   style: OutlinedButton.styleFrom(
                                     side: const BorderSide(color: Colors.white),
                                     foregroundColor: Colors.white,
-                                    minimumSize: const Size(double.infinity, 50),
+                                    minimumSize:
+                                        const Size(double.infinity, 50),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                   ),
-                                  child: const Text(
-                                    'REGISTER',
-                                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                  child: const FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Text(
+                                      'REGISTER',
+                                      style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold),
+                                    ),
                                   ),
                                 ),
                               ),

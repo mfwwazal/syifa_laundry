@@ -94,6 +94,9 @@ class _MandiriPageState extends State<MandiriPage> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
+        iconTheme: const IconThemeData(
+          color: Colors.white,
+        ),
         title: const Text(
           'Laundry Mandiri',
           style: TextStyle(
