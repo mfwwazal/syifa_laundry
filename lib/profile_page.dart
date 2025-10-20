@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:syifa_laundry/home_page.dart';
 import 'package:syifa_laundry/welcome_page.dart';
+import 'package:intl/intl.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -20,11 +21,15 @@ class _ProfilePageState extends State<ProfilePage>
   late Animation<double> _fadeAnim;
   bool _isLoading = true;
 
+  final TextEditingController _adminCodeCtrl = TextEditingController();
+
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 800));
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
     _fadeAnim = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
     _loadUserData();
   }
@@ -34,26 +39,23 @@ class _ProfilePageState extends State<ProfilePage>
     final customerId = prefs.getString('customerId');
     final currentUser = FirebaseAuth.instance.currentUser;
 
-    if (currentUser != null) {
-      user = currentUser;
-      final snapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(currentUser.uid)
-          .get();
-      if (snapshot.exists) {
-        userData = snapshot.data();
-      }
-    } else if (customerId != null) {
-      final snapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(customerId)
-          .get();
-      if (snapshot.exists) {
-        userData = snapshot.data();
-      }
+    String? uid = currentUser?.uid ?? customerId;
+    if (uid == null) {
+      setState(() => _isLoading = false);
+      return;
     }
 
-    setState(() => _isLoading = false);
+    final snapshot =
+        await FirebaseFirestore.instance.collection('users').doc(uid).get();
+
+    if (snapshot.exists) {
+      userData = snapshot.data();
+    }
+
+    setState(() {
+      user = currentUser;
+      _isLoading = false;
+    });
     _controller.forward();
   }
 
@@ -71,137 +73,61 @@ class _ProfilePageState extends State<ProfilePage>
     }
   }
 
-  Future<void> _editProfileDialog() async {
-    final TextEditingController nameCtrl =
-        TextEditingController(text: userData?['name'] ?? '');
-    final TextEditingController phoneCtrl =
-        TextEditingController(text: userData?['phone'] ?? '');
-    final TextEditingController addressCtrl =
-        TextEditingController(text: userData?['address'] ?? '');
+  /// ✅ Verifikasi kode admin untuk upgrade role
+  Future<void> _verifyAdminCode() async {
+    const validCode = "Fawwaz Ganteng";
+    final code = _adminCodeCtrl.text.trim();
 
-    await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: const Color(0xFF1B2E35),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    if (code != validCode) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Kode salah. Tidak ada perubahan."),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
+
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return;
+
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(currentUser.uid)
+        .set({'role': 'admin'}, SetOptions(merge: true));
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Kode valid! Anda sekarang adalah ADMIN."),
+        backgroundColor: Colors.greenAccent,
       ),
-      builder: (context) {
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-            top: 24,
-            left: 24,
-            right: 24,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Center(
-                child: Text(
-                  "Edit Profil",
-                  style: TextStyle(
-                    color: Colors.cyanAccent,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-              _buildTextField("Nama", nameCtrl, Icons.person),
-              _buildTextField("Nomor Telepon", phoneCtrl, Icons.phone),
-              _buildTextField("Alamat", addressCtrl, Icons.location_on),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () async {
-                  final prefs = await SharedPreferences.getInstance();
-                  final customerId = prefs.getString('customerId');
-                  final currentUser = FirebaseAuth.instance.currentUser;
-
-                  String? docId;
-                  if (currentUser != null) {
-                    docId = currentUser.uid;
-                  } else if (customerId != null) {
-                    docId = customerId;
-                  }
-
-                  if (docId == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content:
-                            Text("Gagal menyimpan: pengguna tidak ditemukan."),
-                        backgroundColor: Colors.redAccent,
-                      ),
-                    );
-                    return;
-                  }
-
-                  await FirebaseFirestore.instance
-                      .collection('users')
-                      .doc(docId)
-                      .update({
-                    'name': nameCtrl.text.trim(),
-                    'phone': phoneCtrl.text.trim(),
-                    'address': addressCtrl.text.trim(),
-                  });
-
-                  Navigator.pop(context);
-                  await _loadUserData();
-
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text("Profil berhasil diperbarui."),
-                      backgroundColor: Colors.cyan,
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF63B9C4),
-                  minimumSize: const Size(double.infinity, 48),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: const Text(
-                  "Simpan Perubahan",
-                  style: TextStyle(
-                    color: Colors.black,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-            ],
-          ),
-        );
-      },
     );
+
+    await _loadUserData();
+    _adminCodeCtrl.clear();
   }
 
-  Widget _buildTextField(
-      String label, TextEditingController controller, IconData icon) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: TextField(
-        controller: controller,
-        style: const TextStyle(color: Colors.white),
-        decoration: InputDecoration(
-          prefixIcon: Icon(icon, color: Colors.cyanAccent),
-          labelText: label,
-          labelStyle: const TextStyle(color: Colors.white70),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Colors.cyanAccent),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Colors.cyan),
-          ),
-        ),
+  /// 🔄 Ganti role antara admin dan user
+  Future<void> _changeRole() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return;
+
+    final currentRole = userData?['role'] ?? 'user';
+    final newRole = currentRole == 'admin' ? 'user' : 'admin';
+
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(currentUser.uid)
+        .update({'role': newRole});
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("Role diubah menjadi: $newRole"),
+        backgroundColor: Colors.cyan,
       ),
     );
+
+    await _loadUserData();
   }
 
   @override
@@ -252,6 +178,7 @@ class _ProfilePageState extends State<ProfilePage>
                           ),
                         ),
                         const SizedBox(height: 30),
+
                         Container(
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.08),
@@ -266,32 +193,87 @@ class _ProfilePageState extends State<ProfilePage>
                                   userData?['phone'] ?? "-"),
                               _infoRow(Icons.location_on, "Address",
                                   userData?['address'] ?? "-"),
-                              _infoRow(Icons.calendar_today, "Joined At",
-                                  userData?['createdAt'] ?? "-"),
+                              _infoRow(
+                                Icons.calendar_today,
+                                "Joined At",
+                                userData?['joinedAt'] != null
+                                    ? DateFormat('dd MMM yyyy, HH:mm').format(
+                                        (userData!['joinedAt'] as Timestamp)
+                                            .toDate())
+                                    : "-",
+                              ),
+                              _infoRow(Icons.verified_user, "Role",
+                                  userData?['role'] ?? "user"),
                             ],
                           ),
                         ),
-                        const SizedBox(height: 30),
-                        ElevatedButton.icon(
-                          onPressed: _editProfileDialog,
-                          icon: const Icon(Icons.edit, color: Colors.black),
-                          label: const Text(
-                            "Edit Profil",
-                            style: TextStyle(
-                              color: Colors.black,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
+
+                        const SizedBox(height: 20),
+
+                        /// 🔹 Tombol ganti role (hanya tampil jika role = admin)
+                        if (userData?['role'] == 'admin')
+                          ElevatedButton.icon(
+                            onPressed: _changeRole,
+                            icon: const Icon(Icons.switch_account,
+                                color: Colors.black),
+                            label: Text(
+                              userData?['role'] == 'admin'
+                                  ? "Turunkan jadi USER"
+                                  : "Naikkan jadi ADMIN",
+                              style: const TextStyle(
+                                color: Colors.black,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.amberAccent,
+                              minimumSize: const Size(double.infinity, 48),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
                             ),
                           ),
+
+                        const SizedBox(height: 16),
+
+                        /// 🧩 Input kode admin
+                        TextField(
+                          controller: _adminCodeCtrl,
+                          decoration: InputDecoration(
+                            hintText: "Masukkan kode admin...",
+                            hintStyle: const TextStyle(color: Colors.white54),
+                            filled: true,
+                            fillColor: Colors.white.withOpacity(0.1),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: const BorderSide(
+                                  color: Colors.cyanAccent),
+                            ),
+                          ),
+                          style: const TextStyle(color: Colors.white),
+                        ),
+                        const SizedBox(height: 10),
+                        ElevatedButton(
+                          onPressed: _verifyAdminCode,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: cyanLight,
+                            backgroundColor: Colors.greenAccent,
                             minimumSize: const Size(double.infinity, 48),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(14),
                             ),
                           ),
+                          child: const Text(
+                            "Verifikasi Kode Admin",
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
+
                         const SizedBox(height: 16),
+
+                        /// 🚪 Tombol Logout
                         ElevatedButton.icon(
                           onPressed: _logout,
                           icon: const Icon(Icons.logout, color: Colors.black),

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../main_layout.dart'; // pastikan ini ada
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../main_layout.dart';
+import '../admin_page.dart'; // pastikan file ini ada
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -44,29 +46,76 @@ class _LoginPageState extends State<LoginPage>
     super.dispose();
   }
 
-  // ✅ LOGIN AMAN & LANGSUNG PINDAH HALAMAN
   Future<void> _login() async {
-    setState(() => _isLoading = true);
-    try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Email dan password tidak boleh kosong'),
+          backgroundColor: Colors.redAccent,
+        ),
       );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final userCredential = await FirebaseAuth.instance
+          .signInWithEmailAndPassword(email: email, password: password);
+
+      final uid = userCredential.user?.uid;
+      if (uid == null) throw Exception("User tidak ditemukan.");
+
+      // 🔍 Cek role di Firestore
+      final userDoc =
+          await FirebaseFirestore.instance.collection('users').doc(uid).get();
+
+      final role = userDoc.data()?['role'] ?? 'user';
 
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Login berhasil ✅')),
+        SnackBar(
+          content: Text('Login berhasil sebagai $role ✅'),
+          backgroundColor: Colors.cyan,
+        ),
       );
 
-      // Langsung pindah ke MainLayout tanpa perlu refresh
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const MainLayout()),
-      );
+      // 🔄 Arahkan ke halaman sesuai role
+      if (role == 'admin') {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const AdminPage()),
+          (route) => false,
+        );
+      } else {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const MainLayout()),
+          (route) => false,
+        );
+      }
     } on FirebaseAuthException catch (e) {
+      String errorMessage = 'Gagal login.';
+      if (e.code == 'user-not-found') {
+        errorMessage = 'Pengguna tidak ditemukan.';
+      } else if (e.code == 'wrong-password') {
+        errorMessage = 'Password salah.';
+      } else if (e.code == 'invalid-email') {
+        errorMessage = 'Format email tidak valid.';
+      } else if (e.code == 'user-disabled') {
+        errorMessage = 'Akun dinonaktifkan.';
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message ?? 'Gagal login')),
+        SnackBar(content: Text(errorMessage), backgroundColor: Colors.redAccent),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Terjadi kesalahan: $e')),
       );
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -116,7 +165,6 @@ class _LoginPageState extends State<LoginPage>
                     ),
                     const SizedBox(height: 30),
 
-                    // FORM stabil (tanpa flicker)
                     TextField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
@@ -148,7 +196,6 @@ class _LoginPageState extends State<LoginPage>
                     ),
                     const SizedBox(height: 30),
 
-                    // Tombol login animasi lembut
                     AnimatedBuilder(
                       animation: _pulseAnim,
                       builder: (context, _) => Container(

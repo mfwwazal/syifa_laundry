@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // ✅ tambahkan ini
 import '../main_layout.dart';
 import 'dart:ui';
 
@@ -47,10 +48,27 @@ class _RegisterPageState extends State<RegisterPage>
   Future<void> _register() async {
     setState(() => _isLoading = true);
     try {
-      await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      // ✅ Buat akun baru di Firebase Auth
+      UserCredential userCredential =
+          await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
+
+      User? user = userCredential.user;
+
+      // ✅ Simpan data user ke Firestore
+      if (user != null) {
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+          'name': '',
+          'email': user.email,
+          'phone': '',
+          'address': '',
+          'role': 'user',
+          'joinedAt': DateTime.now(),
+        });
+      }
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Akun berhasil dibuat!')),
@@ -111,8 +129,6 @@ class _RegisterPageState extends State<RegisterPage>
                       style: TextStyle(color: Colors.white70, fontSize: 16),
                     ),
                     const SizedBox(height: 30),
-
-                    // FORM (tidak kedap-kedip)
                     TextField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
@@ -143,8 +159,6 @@ class _RegisterPageState extends State<RegisterPage>
                       ),
                     ),
                     const SizedBox(height: 30),
-
-                    // Tombol dengan animasi pulse
                     AnimatedBuilder(
                       animation: _pulseAnim,
                       builder: (context, _) => Container(
@@ -201,7 +215,6 @@ class _RegisterPageState extends State<RegisterPage>
                       ),
                     ),
                     const SizedBox(height: 20),
-
                     TextButton(
                       onPressed: () => Navigator.pushNamed(context, '/login'),
                       child: const Text(
