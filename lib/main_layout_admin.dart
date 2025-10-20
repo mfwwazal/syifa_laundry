@@ -1,84 +1,181 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'home_page.dart';
-import 'profile_page.dart';
+import 'package:flutter/services.dart';
 import 'admin_page.dart';
 
-class MainLayout extends StatefulWidget {
-  const MainLayout({super.key});
+class MainLayoutAdmin extends StatefulWidget {
+  final String title;
+  final Widget body;
+
+  const MainLayoutAdmin({
+    super.key,
+    required this.title,
+    required this.body,
+  });
 
   @override
-  State<MainLayout> createState() => _MainLayoutState();
+  State<MainLayoutAdmin> createState() => _MainLayoutAdminState();
 }
 
-class _MainLayoutState extends State<MainLayout> {
+class _MainLayoutAdminState extends State<MainLayoutAdmin> {
   int _selectedIndex = 0;
-  String? _role;
-  bool _loading = true;
 
-  @override
-  void initState() {
-    super.initState();
-    _loadRole();
-  }
+  static const List<Widget> _widgetOptions = <Widget>[
+    AdminPage(), // USERS
+    Center(child: Text('Orders Page', style: TextStyle(color: Colors.white))),
+    Center(child: Text('Reports Page', style: TextStyle(color: Colors.white))),
+    Center(child: Text('Profile Page', style: TextStyle(color: Colors.white))),
+  ];
 
-  Future<void> _loadRole() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
-    final doc =
-        await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
-    setState(() {
-      _role = doc.data()?['role'] ?? 'user';
-      _loading = false;
-    });
-  }
-
-  void _onTap(int index) {
+  void _onItemTapped(int index) {
+    if (index == _selectedIndex) return;
+    HapticFeedback.lightImpact();
     setState(() => _selectedIndex = index);
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator(color: Colors.cyanAccent)),
-      );
-    }
-
-    final bool isAdmin = _role == 'admin';
-
-    final pages = isAdmin
-        ? [const HomePage(), const AdminPage(), const ProfilePage()]
-        : [const HomePage(), const ProfilePage()];
-
-    final navItems = isAdmin
-        ? const [
-            BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
-            BottomNavigationBarItem(
-                icon: Icon(Icons.admin_panel_settings), label: "Admin"),
-            BottomNavigationBarItem(icon: Icon(Icons.person), label: "Profile"),
-          ]
-        : const [
-            BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
-            BottomNavigationBarItem(icon: Icon(Icons.person), label: "Profile"),
-          ];
+    const Color activeColor = Colors.white;
+    const Color inactiveColor = Colors.white;
+    const Color glowColor = Color(0xFF63B9C4);
 
     return Scaffold(
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: pages,
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        title: Text(
+          widget.title,
+          style: const TextStyle(
+              color: Colors.cyanAccent, fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: Colors.black,
+        elevation: 0,
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: _onTap,
-        backgroundColor: const Color(0xFF112240),
-        selectedItemColor: Colors.cyanAccent,
-        unselectedItemColor: Colors.white70,
-        items: navItems,
+      body: SafeArea(
+        bottom: true,
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 400),
+          transitionBuilder: (Widget child, Animation<double> animation) {
+            final offsetTween =
+                Tween<Offset>(begin: const Offset(0.1, 0), end: Offset.zero);
+            return SlideTransition(
+              position: offsetTween.animate(
+                CurvedAnimation(parent: animation, curve: Curves.easeInOut),
+              ),
+              child: FadeTransition(opacity: animation, child: child),
+            );
+          },
+          child: _widgetOptions[_selectedIndex],
+        ),
       ),
-      backgroundColor: const Color(0xFF0A192F),
+      bottomNavigationBar: Container(
+        margin: const EdgeInsets.all(16),
+        height: 70,
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(30),
+          border: Border.all(color: Colors.white.withOpacity(0.15), width: 1),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.3),
+              blurRadius: 20,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(30),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildNavItem(Icons.people, 'USERS', 0, activeColor,
+                    inactiveColor, glowColor),
+                _buildNavItem(Icons.local_laundry_service, 'ORDERS', 1,
+                    activeColor, inactiveColor, glowColor),
+                _buildNavItem(Icons.bar_chart, 'REPORT', 2, activeColor,
+                    inactiveColor, glowColor),
+                _buildNavItem(Icons.admin_panel_settings, 'PROFILE', 3,
+                    activeColor, inactiveColor, glowColor),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem(IconData icon, String label, int index, Color activeColor,
+      Color inactiveColor, Color glowColor) {
+    final bool isActive = _selectedIndex == index;
+    IconData effectiveIcon = icon;
+
+    if (index == 0) {
+      effectiveIcon = isActive ? Icons.people : Icons.people_outline;
+    } else if (index == 3) {
+      effectiveIcon = isActive
+          ? Icons.admin_panel_settings
+          : Icons.admin_panel_settings_outlined;
+    }
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(30),
+      onTap: () => _onItemTapped(index),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeInOut,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: isActive ? Colors.white.withOpacity(0.1) : Colors.transparent,
+          borderRadius: BorderRadius.circular(25),
+          boxShadow: isActive
+              ? [
+                  BoxShadow(
+                    color: glowColor.withOpacity(0.6),
+                    blurRadius: 15,
+                    spreadRadius: 2,
+                  ),
+                ]
+              : [],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedScale(
+              duration: const Duration(milliseconds: 250),
+              scale: isActive ? 1.15 : 1.0,
+              curve: Curves.easeOut,
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 250),
+                opacity: isActive ? 1 : 0.6,
+                child: Icon(
+                  effectiveIcon,
+                  color: isActive ? activeColor : inactiveColor,
+                  size: 30,
+                ),
+              ),
+            ),
+            AnimatedSize(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeInOut,
+              child: isActive
+                  ? Padding(
+                      padding: const EdgeInsets.only(left: 8.0),
+                      child: Text(
+                        label,
+                        style: TextStyle(
+                          color: activeColor,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    )
+                  : const SizedBox.shrink(),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
